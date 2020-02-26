@@ -37,7 +37,6 @@ betaConv (Var x) = Var x
 betaConv (Func x m) = Func x m
 betaConv (App (Func x m) n) = if (intersect (bound (Func x m)) (free n)) == [] then subs m n x else (App (Func x m) n)
 
-
 --reductions 
 reduction :: Term -> Term
 reduction (Var x) = Var x
