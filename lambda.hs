@@ -11,13 +11,15 @@ bound (App m n) = bound m ++ bound n
 
 --free variables
 remove :: [String] -> [String] -> [String]
-remove [] x = []
+remove [] [] = []
+remove [] x = x
+remove x [] = []
 remove (y : ys) (x : xs) = if y == x then remove ys xs else [x] ++ remove (y : ys) xs
        
-free :: Term -> [String]
+free :: Term -> [String] 
 free (Var x) = [x]
 free (Func x m) = remove [x] (free m)
-free (App m n) = free m ++ free n
+free (App m n) = free m ++ free n --free n mal avaliado
 
 --substitution 
 subs :: Term -> Term -> String -> Term
@@ -41,4 +43,5 @@ betaConv (App (Func x m) n) = if (intersect (bound (Func x m)) (free n)) == [] t
 reduction :: Term -> Term
 reduction (Var x) = Var x
 reduction (Func x m) = Func x (reduction m)
+reduction (App (Var x) n) = App (Var "x") (reduction n) 
 reduction (App m n) = betaConv (App (reduction m) (reduction n))
