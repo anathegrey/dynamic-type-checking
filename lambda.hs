@@ -18,8 +18,8 @@ remove (y : ys) (x : xs) = if y == x then remove ys xs else [x] ++ remove (y : y
        
 free :: Term -> [String] 
 free (Var x) = [x]
-free (Func x m) = remove [x] (free m)
-free (App m n) = free m ++ free n --free n mal avaliado
+free (Func x m) = remove [x] (free m) 
+free (App m n) = free m ++ free n
 
 --substitution 
 subs :: Term -> Term -> String -> Term
