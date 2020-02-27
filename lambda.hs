@@ -10,13 +10,13 @@ bound (Func x m) = bound m ++ [x]
 bound (App m n) = bound m ++ bound n
 
 --free variables
-remove :: String -> [String] -> [String]
-remove _ [] = []
-remove y (x : xs) = if y == x then remove y xs else [x] ++ remove y xs
+remove :: [String] -> [String] -> [String]
+remove [] x = []
+remove (y : ys) (x : xs) = if y == x then remove ys xs else [x] ++ remove (y : ys) xs
        
 free :: Term -> [String]
-free (Var x) = [x] --corrigir
-free (Func x m) = remove x (free m)
+free (Var x) = [x]
+free (Func x m) = remove [x] (free m)
 free (App m n) = free m ++ free n
 
 --substitution 
@@ -25,7 +25,7 @@ subs (Var x) l y = if x == y then l else (Var x)
 subs (Func x m) l y = if x == y then (Func x m) else (Func x (subs m l y))
 subs (App m n) l y = App (subs m l y) (subs n l y)
 
---beta-conversion (rever)
+--beta-conversion 
 intersect :: [String] -> [String] -> [String]
 intersect [] _ = []
 intersect (x : xs) y
