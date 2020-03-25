@@ -32,7 +32,10 @@ isValue (ExprC v t1 Dyn l)
         | isGround t1 = isValue v
         | otherwise = False
 
---beta reduction
+beta :: Expr -> Expr
+beta (AppE (FuncE x t f) v)
+     | (isValue v) = AppE v f
+     | otherwise = Null
 
 idbase :: Expr -> Expr
 idbase Null = Null
@@ -56,3 +59,10 @@ appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
         | (isValue v1) && (isValue v2) = AppE v1 (ExprC (ExprC v2 t3 t1 l) t2 t4 l)
 	| otherwise = Null
 
+--ground
+
+--expand
+
+--cong
+
+--blame
