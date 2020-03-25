@@ -1,5 +1,6 @@
 data Type = Int
           | Bool
+	  | Float
           | FuncT Type Type
           | Dyn
           deriving (Show, Eq)
@@ -8,6 +9,7 @@ type Label = String
 
 data Expr = ConstI Int
           | ConstB Bool
+	  | ConstF Float
           | VarE String
           | FuncE String Type Expr
           | AppE Expr Expr
@@ -19,12 +21,14 @@ data Expr = ConstI Int
 isGround :: Type -> Bool
 isGround Int = True
 isGround Bool = True
+isGround Float = True
 isGround (FuncT Dyn Dyn) = True
 
 isValue :: Expr -> Bool
 isValue Null = False
 isValue (ConstI x) = True
 isValue (ConstB x) = True
+isValue (ConstF x) = True
 isValue (VarE x) = True
 isValue (FuncE x t1 exp) = True
 isValue (ExprC v (FuncT t1 t2) (FuncT t3 t4) l) = isValue v
@@ -57,7 +61,7 @@ appcast :: Expr -> Expr
 appcast Null = Null
 appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
         | (isValue v1) && (isValue v2) = AppE v1 (ExprC (ExprC v2 t3 t1 l) t2 t4 l)
-	| otherwise = Null
+	| otherwise = (Blame t4 l)
 
 --ground
 
