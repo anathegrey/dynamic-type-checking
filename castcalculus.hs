@@ -52,16 +52,14 @@ idstar (ExprC expr Dyn Dyn l) = if (isValue expr) then expr else Null
 succeed :: Expr -> Expr -> Expr
 succeed Null Null = Null
 succeed (ExprC v1 g1 Dyn l1) (ExprC v2 Dyn g2 l2)
-        | (isValue v1) && (isGround g1) && (isGround g2) = if g1 == g2 then v1 else (Blame g2 l2)
+        | (isValue v1) && (isGround g1) && (isGround g2) && (v1 == v2) = if g1 == g2 then v1 else (Blame g2 l2)
 	| otherwise = Null
-	where
-	  v1 = v2
 
 appcast :: Expr -> Expr
 appcast Null = Null
 appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
         | (isValue v1) && (isValue v2) = AppE v1 (ExprC (ExprC v2 t3 t1 l) t2 t4 l)
-	| otherwise = (Blame t4 l)
+	| otherwise = Null
 
 --ground
 
