@@ -60,9 +60,9 @@ ground (ExprC v t Dyn l)
 expand :: Expr -> Expr
 expand (ExprC v Dyn t l) 
        | (isValue v) && t /= Dyn && t /= Int = ExprC (ExprC v t Int l) Int Dyn l
-       | (isValue v) && t /= Dyn && t /= Bool = ExprC (ExprC v t Int l) Bool Dyn l
-       | (isValue v) && t /= Dyn && t /= Float = ExprC (ExprC v t Int l) Float Dyn l
-       | (isValue v) && t /= Dyn && t /= (FuncT Dyn Dyn) = ExprC (ExprC v t Int l) (FuncT Dyn Dyn) Dyn l
+       | (isValue v) && t /= Dyn && t /= Bool = ExprC (ExprC v t Bool l) Bool Dyn l
+       | (isValue v) && t /= Dyn && t /= Float = ExprC (ExprC v t Float l) Float Dyn l
+       | (isValue v) && t /= Dyn && t /= (FuncT Dyn Dyn) = ExprC (ExprC v t (FuncT Dyn Dyn) l) (FuncT Dyn Dyn) Dyn l
        | otherwise = ExprC v Dyn t l
 
 interp :: Expr -> Expr
