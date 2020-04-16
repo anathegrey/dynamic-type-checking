@@ -41,14 +41,13 @@ isValue (VarE x) = True
 isValue (FuncE x t1 exp) = True
 isValue None = True
 isValue (ExprC v (FuncT t1 t2) (FuncT t3 t4) l) = isValue v
-isValue (ExprC v t1 Dyn l)
-        | isGround t1 = isValue v
-        | otherwise = False
+isValue (ExprC v t1 Dyn l) = if (isGround t1) then (isValue v) else False
 
-subs :: Expr -> String -> Expr -> Expr
+--subs :: Expr -> Type -> String -> Expr -> Expr
+--subs f t x v = (FuncE v t f)
 
 beta :: Expr -> Expr
-beta (AppE (FuncE x t f) v) = if (isValue v) then (FuncE x t (subs f x v)) else (AppE (FuncE x t f) v)
+beta (AppE (FuncE x t f) v) = if (isValue v) then (interp (AppE f v)) else (AppE (FuncE x t f) v)
 
 succeed :: Expr -> Expr
 succeed (ExprC (ExprC v g1 Dyn l1) Dyn g2 l2)
@@ -79,21 +78,33 @@ expand (ExprC v Dyn t l)
 takeInt :: Expr -> Int
 takeInt (ConstI n) = n
 
+isInt :: Expr -> Bool
+isInt (ConstI n) = True
+isInt (ConstF n) = False
+isInt (ConstB n) = False
+
 takeFloat :: Expr -> Float
 takeFloat (ConstF n) = n
 
+isFloat :: Expr -> Bool
+isFloat (ConstF n) = True
+isFloat (ConstI n) = False
+isFloat (ConstB n) = False
+
 takeBool :: Expr -> Bool
 takeBool (ConstB n) = n
+
+isBool :: Expr -> Bool
+isBool (ConstB n) = True
+isBool (ConstI n) = False
+isBool (ConstF n) = False
 
 interp :: Expr -> Expr
 interp (AppE (FuncE x t f) v) = beta (AppE (FuncE x t f) v)
 interp (ExprC (ExprC v1 g1 Dyn l1) Dyn g2 l2) = succeed (ExprC (ExprC v1 g1 Dyn l1) Dyn g2 l2)
 interp (ExprC (Blame t l) t1 t2 l1) = if (t == t1) then (Blame t2 l) else (ExprC (Blame t l) t1 t2 l1)
 interp (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2) = appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
-interp (AppE expr1 expr2)
-       | (isValue expr1) && (isValue expr2) == False = (AppE expr1 (interp expr2))
-       | (isValue expr1) == False && (isValue expr2) = (AppE (interp expr1) expr2)
-       | (isValue expr1) == False && (isValue expr2) == False = (AppE (interp expr1) (interp expr2))
+interp (AppE expr1 expr2) = (AppE (interp expr1) (interp expr2))
 interp (ExprC expr t1 t2 l)
        | (isValue expr) && t1 == t2 && t1 /= (FuncT Dyn Dyn) && t1 /= Dyn = expr
        | (isValue expr) && t1 == t2 && t1 == Dyn = expr
@@ -103,9 +114,35 @@ interp (ExprC expr t1 t2 l)
 interp (ConstI x) = (ConstI x)
 interp (ConstB x) = (ConstB x)
 interp (ConstF x) = (ConstF x)
-interp (Add e1 e2) = ConstF (takeFloat (interp e1) + takeFloat (interp e2))
-interp (Sub e1 e2) = ConstF (takeFloat (interp e1) - takeFloat (interp e2))
-interp (Mul e1 e2) = ConstF (takeFloat (interp e1) * takeFloat (interp e2))
+interp (Add e1 e2) =
+       let expr1 = (interp e1)
+           expr2 = (interp e2)
+       in if (isFloat expr1) && (isFloat expr2) then ConstF (takeFloat expr1 + takeFloat expr2) else (if (isInt expr1) && (isInt expr2) then ConstI (takeInt expr1 + takeInt expr2) else (Add expr1 expr2))
+interp (Sub e1 e2) =
+       let expr1 = (interp e1)
+           expr2 = (interp e2)
+       in if (isFloat expr1) && (isFloat expr2) then ConstF (takeFloat expr1 - takeFloat expr2) else (if (isInt expr1) && (isInt expr2) then ConstI (takeInt expr1 - takeInt expr2) else (Sub expr1 expr2))
+interp (Mul e1 e2) =
+       let expr1 = (interp e1)
+           expr2 = (interp e2)
+       in if (isFloat expr1) && (isFloat expr2) then ConstF (takeFloat expr1 * takeFloat expr2) else (if (isInt expr1) && (isInt expr2) then ConstI (takeInt expr1 * takeInt expr2) else (Mul expr1 expr2))
+interp (Less e1 e2) =
+       let expr1 = (interp e1)
+           expr2 = (interp e2)
+       in if (isFloat expr1) && (isFloat expr2) then ConstB (takeFloat expr1 < takeFloat expr2) else (if (isInt expr1) && (isInt expr2) then ConstB (takeInt expr1 < takeInt expr2) else (Less e1 e2))
+interp (Bigger e1 e2) =
+       let expr1 = (interp e1)
+           expr2 = (interp e2)
+       in if (isFloat expr1) && (isFloat expr2) then ConstB (takeFloat expr1 > takeFloat expr2) else (if (isInt expr1) && (isInt expr2) then ConstB (takeInt expr1 > takeInt expr2) else (Bigger e1 e2))
+interp (LessEq e1 e2) =
+       let expr1 = (interp e1)
+           expr2 = (interp e2)
+       in if (isFloat expr1) && (isFloat expr2) then ConstB (takeFloat expr1 <= takeFloat expr2) else (if (isInt expr1) && (isInt expr2) then ConstB (takeInt expr1 <= takeInt expr2) else (LessEq e1 e2))
+interp (BiggerEq e1 e2) =
+       let expr1 = (interp e1)
+           expr2 = (interp e2)
+       in if (isFloat expr1) && (isFloat expr2) then ConstB (takeFloat expr1 >= takeFloat expr2) else (if (isInt expr1) && (isInt expr2) then ConstB (takeInt expr1 >= takeInt expr2) else (BiggerEq e1 e2))
+interp (If e1 e2 e3) = if (takeBool (interp e1)) then (interp e2) else (interp e3)
 interp _ = None
 
 
@@ -116,3 +153,6 @@ ex1 = AppE (ExprC (FuncE "y" Float (Sub (VarE "y") (ConstF 1.0))) (FuncT Dyn Dyn
 
 ex2 :: Expr
 ex2 = ExprC (AppE (FuncE "y" Float (Sub (VarE "y") (ConstF 1.0))) (ExprC (ConstF 3.01) Float Dyn "l")) Dyn Float "l"
+
+ex3 :: Expr
+ex3 = ExprC (ConstF 3.01) Float Dyn "l"
