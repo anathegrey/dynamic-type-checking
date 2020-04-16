@@ -59,13 +59,14 @@ appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
         | (isValue v1) && (isValue v2) = (ExprC (AppE v1 (ExprC v2 t3 t1 l)) t2 t4 l)
         | otherwise = (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
 
+--incomplete
+buildCompatible :: Type -> Type
+buildCompatible (FuncT t1 t2) = FuncT t1 Dyn
+
 ground :: Expr -> Expr
 ground (ExprC v t Dyn l)
-       | (isValue v) && t /= Dyn && t /= Int = ExprC (ExprC v t Int l) Int Dyn l
-       | (isValue v) && t /= Dyn && t /= Bool = ExprC (ExprC v t Bool l) Bool Dyn l
-       | (isValue v) && t /= Dyn && t /= Float = ExprC (ExprC v t Float l) Float Dyn l
-       | (isValue v) && t /= Dyn && t /= (FuncT Dyn Dyn) = ExprC (ExprC v t (FuncT Dyn Dyn) l) (FuncT Dyn Dyn) Dyn l
-       | otherwise = ExprC v t Dyn l
+       | (isValue v) && t /= Dyn && (isGround t) == False = let g = (buildCompatible t) in ExprC (ExprC v t g l) g Dyn l
+       | otherwise = (ExprC v t Dyn l)
 
 expand :: Expr -> Expr
 expand (ExprC v Dyn t l) 
@@ -99,8 +100,19 @@ isBool (ConstB n) = True
 isBool (ConstI n) = False
 isBool (ConstF n) = False
 
+subst :: Expr -> String -> Expr -> Expr
+subst (ConstI n) x v = (ConstI n)
+subst (VarE y) x v
+      | x == y = v
+      | otherwise = (VarE y)
+subst (FuncE y t f) x v
+      | x == y = (FuncE y t f)
+      | otherwise = (FuncE y t (subst f x v))
+subst (Add e1 e2) x v = Add (subst e1 x v) (subst e2 x v)
+subst (If e1 e2 e3) x v = If (subst e1 x v) (subst e2 x v) (subst e3 x v) 
+
 interp :: Expr -> Expr
-interp (AppE (FuncE x t f) v) = beta (AppE (FuncE x t f) v)
+interp (AppE (FuncE x t f) v) = if (isValue v) then interp (subst f x v) else interp (AppE (FuncE x t f) (interp v))
 interp (ExprC (ExprC v1 g1 Dyn l1) Dyn g2 l2) = succeed (ExprC (ExprC v1 g1 Dyn l1) Dyn g2 l2)
 interp (ExprC (Blame t l) t1 t2 l1) = if (t == t1) then (Blame t2 l) else (ExprC (Blame t l) t1 t2 l1)
 interp (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2) = appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
@@ -143,7 +155,7 @@ interp (BiggerEq e1 e2) =
            expr2 = (interp e2)
        in if (isFloat expr1) && (isFloat expr2) then ConstB (takeFloat expr1 >= takeFloat expr2) else (if (isInt expr1) && (isInt expr2) then ConstB (takeInt expr1 >= takeInt expr2) else (BiggerEq e1 e2))
 interp (If e1 e2 e3) = if (takeBool (interp e1)) then (interp e2) else (interp e3)
-interp _ = None
+interp None = None
 
 
 --Examples
