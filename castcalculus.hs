@@ -20,6 +20,7 @@ data Expr = ConstI Int
           | Bigger Expr Expr
           | LessEq Expr Expr
           | BiggerEq Expr Expr
+          | Eq Expr Expr
           | If Expr Expr Expr
           | FuncE String Type Expr
           | AppE Expr Expr
@@ -44,30 +45,6 @@ isValue (FuncE x t1 exp) = True
 isValue (ExprC v (FuncT t1 t2) (FuncT t3 t4) l) = True
 isValue (ExprC v t1 Dyn l) = if (isGround t1) then True else False
 isValue _ = False
-
-succeed :: Expr -> Expr
-succeed (ExprC (ExprC v g1 Dyn l1) Dyn g2 l2)
-        | (isValue v) && (isGround g1) && (isGround g2) = if g1 == g2 then v else (Blame g2 l2)
-        | otherwise = interp (ExprC (ExprC v g1 Dyn l1) Dyn g2 l2)
-
-appcast :: Expr -> Expr
-appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
-        | (isValue v1) && (isValue v2) = ExprC (AppE v1 (ExprC v2 t3 t1 l)) t2 t4 l
-        | otherwise = interp (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
-
---incomplete
-buildCompatible :: Type -> Type
-buildCompatible (FuncT t1 t2) = FuncT t1 Dyn
-
-ground :: Expr -> Expr
-ground (ExprC v t Dyn l)
-       | (isValue v) && t /= Dyn && (isGround t) == False = let g = (buildCompatible t) in ExprC (ExprC v t g l) g Dyn l
-       | otherwise = if (isValue v) then v else interp (ExprC v Dyn t l)
-
-expand :: Expr -> Expr
-expand (ExprC v Dyn t l)
-       | (isValue v) && t /= Dyn && (isGround t) == False = let g = (buildCompatible t) in ExprC (ExprC v Dyn g l) g t l
-       | otherwise = if (isValue v) then v else interp (ExprC v Dyn t l)
 
 takeInt :: Expr -> Int
 takeInt (ConstI n) = n
@@ -96,6 +73,30 @@ isBool :: Expr -> Bool
 isBool (ConstB n) = True
 isBool (ConstI n) = False
 isBool (ConstF n) = False
+
+succeed :: Expr -> Expr
+succeed (ExprC (ExprC v g1 Dyn l1) Dyn g2 l2)
+        | (isValue v) && (isGround g1) && (isGround g2) = if g1 == g2 then v else (Blame g2 l2)
+        | otherwise = interp (ExprC (ExprC v g1 Dyn l1) Dyn g2 l2)
+
+appcast :: Expr -> Expr
+appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
+        | (isValue v1) && (isValue v2) = ExprC (AppE v1 (ExprC v2 t3 t1 l)) t2 t4 l
+        | otherwise = interp (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
+
+--incomplete
+buildCompatible :: Type -> Type
+buildCompatible (FuncT t1 t2) = FuncT t1 Dyn
+
+ground :: Expr -> Expr
+ground (ExprC v t Dyn l)
+       | (isValue v) && t /= Dyn && (isGround t) == False = let g = (buildCompatible t) in ExprC (ExprC v t g l) g Dyn l
+       | otherwise = if (isValue v) then v else interp (ExprC v Dyn t l)
+
+expand :: Expr -> Expr
+expand (ExprC v Dyn t l)
+       | (isValue v) && t /= Dyn && (isGround t) == False = let g = (buildCompatible t) in ExprC (ExprC v Dyn g l) g t l
+       | otherwise = if (isValue v) then v else interp (ExprC v Dyn t l)
 
 subst :: Expr -> String -> Expr -> Expr
 subst (ConstI n) x v = (ConstI n)
@@ -165,6 +166,10 @@ interp (LessEq e1 e2) =
        let expr1 = (interp e1)
            expr2 = (interp e2)
        in if (isInt expr1) then (if (isFloat expr2) then ConstB (fromInt (takeInt expr1) <= takeFloat expr2) else ConstB (takeInt expr1 <= takeInt expr2)) else (if (isInt expr2) then ConstB (takeFloat expr1 <= fromInt (takeInt expr2)) else ConstB (takeFloat expr1 <= takeFloat expr2))
+interp (Eq e1 e2) =
+       let expr1 = (interp e1)
+           expr2 = (interp e2)
+       in if (isInt expr1) then (if (isFloat expr2) then ConstB (fromInt (takeInt expr1) == takeFloat expr2) else ConstB (takeInt expr1 == takeInt expr2)) else (if (isInt expr2) then ConstB (takeFloat expr1 == fromInt (takeInt expr2)) else ConstB (takeFloat expr1 == takeFloat expr2))
 interp (BiggerEq e1 e2) =
        let expr1 = (interp e1)
            expr2 = (interp e2)
