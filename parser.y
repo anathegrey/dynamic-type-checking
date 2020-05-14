@@ -11,9 +11,12 @@
 int { TokenInt }
 float { TokenFloat }
 bool { TokenBool }
-dyn { TokenDyn }
 var { TokenVar $$ }
-label { TokenLabel }
+label { TokenLabel $$ }
+"Int" { TokenStringInt }
+"Float" { TokenStringFloat }
+"Bool" { TokenStringBool }
+"Dyn" { TokenStringDyn }
 "\\" { TokenLambda }
 "==" { TokenEq }
 ">=" { TokenBiggerEq }
@@ -25,7 +28,6 @@ label { TokenLabel }
 '/' { TokenDiv }
 '<' { TokenLess }
 '>' { TokenBigger }
-'=' { TokenEquals }
 '.' { TokenDot }
 ':' { TokenColon }
 ',' { TokenComma }
@@ -37,41 +39,52 @@ label { TokenLabel }
 "then" { TokenThen }
 "else" { TokenElse }
 
+%nonassoc '<' '>' "<=" ">="
+%left '+' '-'
+%left '*' '/'
 %%
 
-Label : label { $1 }
+Expr2 : Expr { $1 }
+| ExprBool { $1 }
 
-Expr : int { ConstI $1 Int }
+Expr : '(' Expr ')' { $2 }
+| int { ConstI $1 Int }
 | '[' int ']' { ConstI $2 Dyn }
 | float { ConstF $1 Float }
 | '[' float ']' { ConstF $2 Dyn }
 | bool { ConstB $1 Bool }
 | '[' bool ']' { ConstB $2 Dyn }
 | var { VarE $1 }
-| Expr '+' Expr { Add $1 $3 }
-| Expr '-' Expr { Sub $1 $3 }
-| Expr '*' Expr { Mul $1 $3 }
-| Expr '/' Expr { Div $1 $3 }
-| Expr '<' Expr { Less $1 $3 }
-| Expr '>' Expr { Bigger $1 $3 }
-| Expr "<=" Expr { LessEq $1 $3 }
-| Expr ">=" Expr { BiggerEq $1 $3 }
-| Expr '<' Expr { Less $1 $3 }
-| Expr '>' Expr { Bigger $1 $3 }
-| Expr "==" Expr { Eq $1 $3 }
-| "if" Expr "then" Expr "else" Expr { If $2 $4 $6 }
-| Expr Expr { AppE $1 $2 }
-| "\\" var '.' Type ':' Expr { FuncE $2 $4 $6 }
-| '<' Type "<=" Type ',' label '>' Expr { ExprC $8 $4 $2 $6 } 
+| ExprArith { $1 }
+| ExprRules { $1 }
 
+Expr1 : Expr { $1 }
 
-Type : int { $1 }
-| float { $1 }
-| bool { $1 }
-| dyn { $1 }
-| Type "->" Type { FuncT $1 $3 }
+ExprArith : Expr '+' Expr1 { Add $1 $3 }
+| Expr '-' Expr1 { Sub $1 $3 }
+| Expr '*' Expr1 { Mul $1 $3 }
+| Expr '/' Expr1 { Div $1 $3 }
 
+ExprBool : Expr "<=" Expr1 { LessEq $1 $3 }
+| Expr ">=" Expr1 { BiggerEq $1 $3 }
+| Expr '<' Expr1 { Less $1 $3 }
+| Expr '>' Expr1 { Bigger $1 $3 }
+| Expr "==" Expr1 { Eq $1 $3 }
 
+ExprRules : "if" Expr2 "then" Expr "else" Expr1 { If $2 $4 $6 }
+| '(' Expr ')''(' Expr ')' { AppE $1 $2 }
+|  "\\" var '.' Type ':' Expr1 { FuncE $2 $4 $6 }
+| '<' Type "<=" Type ',' Label '>' Expr { ExprC $8 $4 $2 $6 }
+
+Label : label { Label $1 }
+
+Type : "Int" { $1 }
+| "Float" { $1 }
+| "Bool" { $1 }
+| "Dyn" { $1 }
+| Type "->" Type1 { FuncT $1 $3 }
+
+Type1 : Type { $1 }
 
 {
 
@@ -82,7 +95,6 @@ Type : int { $1 }
     = TokenInt
     | TokenFloat
     | TokenBool
-    | TokenDyn
     | TokenVar String
     | TokenLabel
     | TokenEq
@@ -92,11 +104,14 @@ Type : int { $1 }
     | TokenBigger
     | TokenLambda
     | TokenArrow
+    | TokenStringInt
+    | TokenStringFloat
+    | TokenStringDyn
+    | TokenStringBool
     | TokenAdd
     | TokenSub
     | TokenMul
     | TokenDiv
-    | TokenEquals
     | TokenDot
     | TokenColon
     | TokenComma
@@ -118,8 +133,9 @@ Type : int { $1 }
     lexer ("==":cs) = TokenEq : lexer cs
     lexer ("<=":cs) = TokenLessEq : lexer cs
     lexer (">=":cs) = TokenBiggerEq : lexer cs
+    lexer ('<':cs) = TokenLess : lexer cs
+    lexer ('>':cs) = TokenBigger : lexer cs
     lexer ("->":cs) = TokenArrow : lexer cs
-    lexer ('=':cs) = TokenEquals : lexer cs
     lexer ('+':cs) = TokenAdd : lexer cs
     lexer ('-':cs) = TokenSub : lexer cs
     lexer ('*':cs) = TokenMul : lexer cs
@@ -142,8 +158,11 @@ Type : int { $1 }
     ("then",rest)  -> TokenThen : lexer rest
     ("else",rest) -> TokenElse : lexer rest
     (var,rest)   -> TokenVar var : lexer rest
-    (label,rest) -> TokenLabel : lexer rest
-    
+    (label,rest) -> TokenLabel label : lexer rest
+    ("Int",rest) -> TokenStringInt : lexer rest
+    ("Bool",rest) -> TokenStringBool : lexer rest
+    ("Float",rest) -> TokenStringFloat : lexer rest
+    ("Dyn",rest) -> TokenStringDyn : lexer rest
     
     main = getContents >>= print . calc . lexer
     }
