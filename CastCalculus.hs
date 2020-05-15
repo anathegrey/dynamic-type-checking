@@ -1,5 +1,5 @@
 module CastCalculus where
-       import Data
+       import CastData
 
        succeed :: Expr -> Expr
        succeed (ExprC (ExprC v g1 Dyn l1) Dyn g2 l2)
