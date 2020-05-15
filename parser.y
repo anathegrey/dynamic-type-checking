@@ -44,21 +44,22 @@ label { TokenLabel $$ }
 %left '*' '/'
 %%
 
-Expr2 : Expr { $1 }
+Expr : Expr1 { $1 }
+| ExprArith { $1 }
 | ExprBool { $1 }
 
-Expr : '(' Expr ')' { $2 }
-| int { ConstI $1 Int }
+Expr1 :  int { ConstI $1 Int }
 | '[' int ']' { ConstI $2 Dyn }
 | float { ConstF $1 Float }
 | '[' float ']' { ConstF $2 Dyn }
 | bool { ConstB $1 Bool }
 | '[' bool ']' { ConstB $2 Dyn }
 | var { VarE $1 }
-| ExprArith { $1 }
-| ExprRules { $1 }
-
-Expr1 : Expr { $1 }
+| '(' Expr ')' { $2 }
+| '(' Expr ')''(' Expr ')' { AppE $1 $2 }
+| "if" ExprBool "then" Expr1 "else" Expr1 { If $2 $4 $6 }
+|  "\\" var '.' Type ':' Expr1 { FuncE $2 $4 $6 }
+| '<' Type "<=" Type ',' Label '>' Expr1 { ExprC $8 $4 $2 $6 }
 
 ExprArith : Expr '+' Expr1 { Add $1 $3 }
 | Expr '-' Expr1 { Sub $1 $3 }
@@ -71,10 +72,6 @@ ExprBool : Expr "<=" Expr1 { LessEq $1 $3 }
 | Expr '>' Expr1 { Bigger $1 $3 }
 | Expr "==" Expr1 { Eq $1 $3 }
 
-ExprRules : "if" Expr2 "then" Expr "else" Expr1 { If $2 $4 $6 }
-| '(' Expr ')''(' Expr ')' { AppE $1 $2 }
-|  "\\" var '.' Type ':' Expr1 { FuncE $2 $4 $6 }
-| '<' Type "<=" Type ',' Label '>' Expr { ExprC $8 $4 $2 $6 }
 
 Label : label { Label $1 }
 
@@ -82,9 +79,12 @@ Type : "Int" { $1 }
 | "Float" { $1 }
 | "Bool" { $1 }
 | "Dyn" { $1 }
-| Type "->" Type1 { FuncT $1 $3 }
+| Type "->" Type1 { FuncT $1 $3  }
 
-Type1 : Type { $1 }
+Type1 : "Int" { $1 }
+| "Float" { $1 }
+| "Bool" { $1 }
+| "Dyn" { $1 }
 
 {
 
@@ -149,8 +149,8 @@ Type1 : Type { $1 }
     lexer ('[':cs) = TokenOSquare : lexer cs
     lexer (']':cs) = TokenCSquare : lexer cs
 
-    lexNum cs = TokenInt (read num) : lexer rest
-    where (num,rest) = span isDigit cs
+    lexNum cs = let (num,rest) = span isDigit cs
+    in if (filter (\x -> x == '.')) cs == [] then TokenInt (read num) : lexer rest else TokenFloat (read num) : '.' : lexNum (tail rest)
     
     lexVar cs =
     case span isAlpha cs of
