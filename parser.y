@@ -2,7 +2,7 @@
 module Main where
 import CastData
 import Data.Char
-    }
+  }
 
 %name calc
 %tokentype { Token }
@@ -14,10 +14,10 @@ float { TokenFloat $$ }
 bool { TokenBool $$ }
 var { TokenVar $$ }
 label { TokenLabel $$ }
-"Int" { TokenStringInt $$ }
-"Float" { TokenStringFloat $$ }
-"Bool" { TokenStringBool $$ }
-"Dyn" { TokenStringDyn $$ }
+"Int" { TokenStringInt }
+"Float" { TokenStringFloat }
+"Bool" { TokenStringBool }
+"Dyn" { TokenStringDyn }
 '\\' { TokenLambda }
 "==" { TokenEq }
 ">=" { TokenBiggerEq }
@@ -58,10 +58,10 @@ Expr1 :  int { ConstI $1 Int }
       | '[' bool ']' { ConstB $2 Dyn }
       | var { VarE $1 }
       | '(' Expr ')' { $2 }
-      | '(' Expr ')''(' Expr ')' { AppE $1 $2 }
+      | '(' Expr ')''(' Expr ')' { AppE $2 $5 }
       | "if" ExprBool "then" Expr1 "else" Expr1 { If $2 $4 $6 }
-      |  '\\' var '.' Type ':' Expr1 { FuncE $2 $4 $6 }
-      | '<' Type "<=" Type ',' Label '>' Expr1 { ExprC $8 $4 $2 $6 }
+      |  '\\' var '.' Type ':' Expr { FuncE $2 $4 $6 }
+      | '<' Type "<=" Type ',' label '>' Expr { ExprC $8 $4 $2 $6 }
       | "none" { None }
 
 ExprArith : Expr '+' Expr1 { Add $1 $3 }
@@ -76,7 +76,7 @@ ExprBool : Expr "<=" Expr1 { LessEq $1 $3 }
          | Expr "==" Expr1 { Eq $1 $3 }
 
 
-Label : label { Label $1 }
+--Label : label { Label $1 }
 
 Type : "Int" { $1 }
      | "Float" { $1 }
@@ -93,13 +93,13 @@ Type1 : "Int" { $1 }
 
 parseError :: [Token] -> a
 parseError _ = error "Parse error"
-
+  
 data Token
-    = TokenInt
-    | TokenFloat
-    | TokenBool
+    = TokenInt Int 
+    | TokenFloat Float
+    | TokenBool Bool 
     | TokenVar String
-    | TokenLabel
+    | TokenLabel String
     | TokenEq
     | TokenBiggerEq
     | TokenLessEq
@@ -107,9 +107,9 @@ data Token
     | TokenBigger
     | TokenLambda
     | TokenArrow
-    | TokenStringInt
-    | TokenStringFloat
-    | TokenStringDyn
+    | TokenStringInt 
+    | TokenStringFloat 
+    | TokenStringDyn 
     | TokenStringBool
     | TokenAdd
     | TokenSub
@@ -153,12 +153,9 @@ lexer (')':cs) = TokenCBrack : lexer cs
 lexer ('[':cs) = TokenOSquare : lexer cs
 lexer (']':cs) = TokenCSquare : lexer cs
 
-lexNum :: String -> [Token]
-lexNum cs = let (num,rest) = span isDigit cs
-          in TokenInt (read num) : lexer rest
---if (filter (\x -> x == '.')) cs == [] then TokenInt (read num) : lexer rest else TokenFloat (read num) : '.' : lexNum (tail rest)
-    
-lexVar :: String -> [Token]    
+lexNum cs = TokenInt (read num) : lexer rest
+      where (num,rest) = span isDigit cs
+  
 lexVar cs =
     case span isAlpha cs of
     ("if",rest) -> TokenIf : lexer rest
