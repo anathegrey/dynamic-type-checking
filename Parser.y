@@ -148,10 +148,16 @@ lexer (']':cs) = TokenCSquare : lexer cs
 lexer (':':cs) = TokenColon : lexer cs
 lexer ('.':cs) = TokenDot : lexer cs
 lexer (',':cs) = TokenComma : lexer cs
-
+  
 lexNum :: String -> [Token]
-lexNum cs = TokenInt (read num) : lexer rest
-      where (num,rest) = span isDigit cs
+lexNum cs
+    | (head rest) == '.' =
+                         let (first, second) = span isDigit (tail rest)                          in TokenFloat (read num) : TokenDot : TokenFloat (read first) : lexer second
+    | otherwise = TokenInt (read num) : lexer rest
+    where (num, rest) = span isDigit cs
+  
+  {- TokenInt (read num) : lexer rest
+   where (num,rest) = span isDigit cs-}
 
 lexVar :: String -> [Token]
 lexVar cs =
