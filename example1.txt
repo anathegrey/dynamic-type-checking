@@ -1,1 +1,0 @@
-<Float <= Dyn, "l"> ((\\y:Float.(if ("y" > 0) then ("y" * 3 - "y" - 1) else none))(<Dyn <= Float, "l"> 3.01))

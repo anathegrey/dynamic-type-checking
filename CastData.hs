@@ -1,8 +1,8 @@
 module CastData where
 
-       data Type = Int
-                 | Bool
-                 | Float
+       data Type = TInt
+                 | TBool
+                 | TFloat
                  | FuncT Type Type
                  | Dyn
                  | NoneType
@@ -32,18 +32,18 @@ module CastData where
                  deriving (Show, Eq)
 
        isGround :: Type -> Bool
-       isGround Int = True
-       isGround Bool = True
-       isGround Float = True
+       isGround TInt = True
+       isGround TBool = True
+       isGround TFloat = True
        isGround (FuncT Dyn Dyn) = True
        isGround _ = False
 
        isValue :: Expr -> Bool
-       isValue (ConstI x Int) = True
+       isValue (ConstI x TInt) = True
        isValue (ConstI x Dyn) = True
-       isValue (ConstB x Bool) = True
+       isValue (ConstB x TBool) = True
        isValue (ConstB x Dyn) = True
-       isValue (ConstF x Float) = True
+       isValue (ConstF x TFloat) = True
        isValue (ConstF x Dyn) = True
        isValue (VarE x) = True
        isValue (FuncE x t1 exp) = True
@@ -52,11 +52,11 @@ module CastData where
        isValue _ = False
 
        takeInt :: Expr -> Int
-       takeInt (ConstI n Int) = n
+       takeInt (ConstI n TInt) = n
        takeInt (ConstI n Dyn) = n
 
        isInt :: Expr -> Bool
-       isInt (ConstI n Int) = True
+       isInt (ConstI n TInt) = True
        isInt (ConstI n _) = False
        isInt (ConstF n _) = False
        isInt (ConstB n _) = False
@@ -65,21 +65,21 @@ module CastData where
        fromInt n = fromInteger (toInteger n)
 
        takeFloat :: Expr -> Float
-       takeFloat (ConstF n Float) = n
+       takeFloat (ConstF n TFloat) = n
        takeFloat (ConstF n Dyn) = n
 
        isFloat :: Expr -> Bool
-       isFloat (ConstF n Float) = True
+       isFloat (ConstF n TFloat) = True
        isFloat (ConstF n _) = False
        isFloat (ConstI n _) = False
        isFloat (ConstB n _) = False
 
        takeBool :: Expr -> Bool
-       takeBool (ConstB n Bool) = n
+       takeBool (ConstB n TBool) = n
        takeBool (ConstB n Dyn) = n
 
        isBool :: Expr -> Bool
-       isBool (ConstB n Bool) = True
+       isBool (ConstB n TBool) = True
        isBool (ConstI n _) = False
        isBool (ConstF n _) = False
 

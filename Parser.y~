@@ -1,5 +1,5 @@
 {
-module Main where
+module Parser where
 import CastData
 import Data.Char
   }
@@ -157,7 +157,7 @@ lexVar :: String -> [Token]
 lexVar cs =
     case span isAlpha cs of
     ("if",rest) -> TokenIf : lexer rest
-    ("then",rest)  -> TokenThen : lexer rest
+    ("then",rest) -> TokenThen : lexer rest
     ("else",rest) -> TokenElse : lexer rest
     ("Int",rest) -> TokenStringInt : lexer rest
     ("Bool",rest) -> TokenStringBool : lexer rest
@@ -165,6 +165,9 @@ lexVar cs =
     ("Dyn",rest) -> TokenStringDyn : lexer rest
     ("none",rest) -> TokenNone : lexer rest
     (var,rest)   -> TokenVar var : lexer rest
-    
+
+parse :: String -> Expr
+parse s = CastData (lexer s)
+  
 main = getContents >>= print . calc . lexer
   }
