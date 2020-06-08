@@ -150,11 +150,7 @@ lexer ('.':cs) = TokenDot : lexer cs
 lexer (',':cs) = TokenComma : lexer cs
   
 lexNum :: String -> [Token]
-lexNum cs
-    | (head rest) == '.' =
-                         let (first, second) = span isDigit (tail rest)                          in TokenFloat (read num) : TokenDot : TokenFloat (read first) : lexer second
-    | otherwise = TokenInt (read num) : lexer rest
-    where (num, rest) = span isDigit cs
+  lexNum cs = let (num, rest) = span isDigit cs in if rest == [] then [TokenInt (read num)] else if (head rest) == '.' then let (first, second) = span isDigit (tail rest) in (TokenFloat (read (num ++ "." ++ first)) : lexer second) else TokenInt (read num) : lexer rest
   
   {- TokenInt (read num) : lexer rest
    where (num,rest) = span isDigit cs-}
