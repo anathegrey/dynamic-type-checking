@@ -50,14 +50,15 @@ Expr : Expr1 { $1 }
      | ExprArith { $1 }
      | ExprBool { $1 }
 
-Consts : int { ConstI $1 TInt }
-       | '[' int ']' { ConstI $2 Dyn }
-       | float { ConstF $1 TFloat }
-       | '[' float ']' { ConstF $2 Dyn }
-       | bool { ConstB $1 TBool }
-
-Expr1 : Consts { $1 }
-      | '-' Consts { Minus $2 }
+Expr1 : int { ConstI $1 TInt }
+      | '-' int { Minus (ConstI $2 TInt) }
+      | '[' int ']' { ConstI $2 Dyn }
+      | '[' '-' int ']' { Minus (ConstI $3 Dyn) }
+      | float { ConstF $1 TFloat }
+      | '-' float { Minus (ConstF $2 TFloat) }
+      | '[' float ']' { ConstF $2 Dyn }
+      | '[' '-' float ']' { Minus (ConstF $3 Dyn) }
+      | bool { ConstB $1 TBool }
       | '[' bool ']' { ConstB $2 Dyn }
       | var { VarE $1 }
       | '(' Expr ')' { $2 }

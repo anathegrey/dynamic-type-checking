@@ -294,7 +294,7 @@ module CastCalculus where
        ex8 = compiler "(\\x:Int.x)(2.4)"
 
        ex9 :: Expr
-       ex9 = compiler "< Float <= Dyn, l > (\\y:Int.(if y > 0 then (y * 3 - y - 1) else none))(<Dyn <= Float, m > 3.01)"
+       ex9 = compiler "< Float <= Dyn, l > (\\y:Int.(if y > 0 then (y * 3 - y - 1) else none))(<Dyn <= Float, m > [3.01])"
 
        ex10 :: Expr
-       ex10 = compiler "< Float <= Dyn, l > ((\\y:Int.(if y > 0 then (y * 3 - y - 1) else none))(<Dyn <= Float, m > -2.99))"
+       ex10 = compiler "< Float <= Dyn, l > ((\\y:Int.(if y > 0 then (y * 3 - y - 1) else none))(<Dyn <= Float, m > [-2.99]))"
