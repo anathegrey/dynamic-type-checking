@@ -64,11 +64,15 @@ module CastCalculus where
               | t1 == Dyn && t2 /= Dyn = interp (expand (ExprC (interp expr) Dyn t2 l)) 
               | otherwise = interp (ExprC expr t1 t2 l)
        interp (ConstI x TInt) = (ConstI x TInt)
+       interp (Minus (ConstI x TInt)) = Minus (ConstI x TInt)
        interp (ConstI x Dyn) = (ConstI x Dyn)
+       interp (Minus (ConstI x Dyn)) = Minus (ConstI x Dyn)
        interp (ConstB x TBool) = (ConstB x TBool)
        interp (ConstB x Dyn) = (ConstB x Dyn) 
        interp (ConstF x TFloat) = (ConstF x TFloat)
+       interp (Minus (ConstF x TFloat)) = Minus (ConstF x TFloat)
        interp (ConstF x Dyn) = (ConstF x Dyn)
+       interp (Minus (ConstF x Dyn)) = Minus (ConstF x Dyn)
        interp (Add e1 e2)
               | isInt expr1 =
                   case () of
@@ -282,3 +286,15 @@ module CastCalculus where
        
        ex6 :: Expr
        ex6 = compiler "(\\x:Int.x)(2)"
+
+       ex7 :: Expr
+       ex7 = AppE (FuncE "x" TInt (VarE "x")) (ConstF 2.4 TFloat)
+
+       ex8 :: Expr
+       ex8 = compiler "(\\x:Int.x)(2.4)"
+
+       ex9 :: Expr
+       ex9 = compiler "< Float <= Dyn, l > (\\y:Int.(if y > 0 then (y * 3 - y - 1) else none))(<Dyn <= Float, m > 3.01)"
+
+       ex10 :: Expr
+       ex10 = compiler "< Float <= Dyn, l > ((\\y:Int.(if y > 0 then (y * 3 - y - 1) else none))(<Dyn <= Float, m > -2.99))"

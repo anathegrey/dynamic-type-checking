@@ -13,6 +13,7 @@ module CastData where
        data Expr = ConstI Int Type
                  | ConstB Bool Type
                  | ConstF Float Type
+                 | Minus Expr
                  | VarE String
                  | Add Expr Expr
                  | Mul Expr Expr
@@ -40,11 +41,15 @@ module CastData where
 
        isValue :: Expr -> Bool
        isValue (ConstI x TInt) = True
+       isValue (Minus (ConstI x TInt)) = True
        isValue (ConstI x Dyn) = True
+       isValue (Minus (ConstI x Dyn)) = True
        isValue (ConstB x TBool) = True
        isValue (ConstB x Dyn) = True
        isValue (ConstF x TFloat) = True
+       isValue (Minus (ConstF x TFloat)) = True
        isValue (ConstF x Dyn) = True
+       isValue (Minus (ConstF x Dyn)) = True
        isValue (VarE x) = True
        isValue (FuncE x t1 exp) = True
        isValue (ExprC v (FuncT t1 t2) (FuncT t3 t4) l) = True
@@ -53,42 +58,45 @@ module CastData where
 
        takeInt :: Expr -> Int
        takeInt (ConstI n TInt) = n
+       takeInt (Minus (ConstI n TInt)) = (-n)
        takeInt (ConstI n Dyn) = n
+       takeInt (Minus (ConstI n Dyn)) = (-n)
 
        isInt :: Expr -> Bool
        isInt (ConstI n TInt) = True
-       isInt (ConstI n _) = False
-       isInt (ConstF n _) = False
-       isInt (ConstB n _) = False
+       isInt (Minus (ConstI n TInt)) = True
+       isInt _ = False
 
        fromInt :: Int -> Float
        fromInt n = fromInteger (toInteger n)
 
        takeFloat :: Expr -> Float
        takeFloat (ConstF n TFloat) = n
+       takeFloat (Minus (ConstF n TFloat)) = (-n)
        takeFloat (ConstF n Dyn) = n
+       takeFloat (Minus (ConstF n Dyn)) = (-n)
 
        isFloat :: Expr -> Bool
        isFloat (ConstF n TFloat) = True
-       isFloat (ConstF n _) = False
-       isFloat (ConstI n _) = False
-       isFloat (ConstB n _) = False
-
+       isFloat (Minus (ConstF n TFloat)) = True
+       isFloat _ = False
+   
        takeBool :: Expr -> Bool
        takeBool (ConstB n TBool) = n
        takeBool (ConstB n Dyn) = n
 
        isBool :: Expr -> Bool
        isBool (ConstB n TBool) = True
-       isBool (ConstI n _) = False
-       isBool (ConstF n _) = False
+       isBool _ = False
 
        isDynInt :: Expr -> Bool
        isDynInt (ConstI n Dyn) = True
+       isDynInt (Minus (ConstI n Dyn)) = True
        isDynInt _ = False
 
        isDynFloat :: Expr -> Bool
        isDynFloat (ConstF n Dyn) = True
+       isDynFloat (Minus (ConstF n Dyn)) = True
        isDynFloat _ = False
 
        isDynBool :: Expr -> Bool

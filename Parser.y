@@ -50,16 +50,19 @@ Expr : Expr1 { $1 }
      | ExprArith { $1 }
      | ExprBool { $1 }
 
-Expr1 :  int { ConstI $1 TInt }
-      | '[' int ']' { ConstI $2 Dyn }
-      | float { ConstF $1 TFloat }
-      | '[' float ']' { ConstF $2 Dyn }
-      | bool { ConstB $1 TBool }
+Consts : int { ConstI $1 TInt }
+       | '[' int ']' { ConstI $2 Dyn }
+       | float { ConstF $1 TFloat }
+       | '[' float ']' { ConstF $2 Dyn }
+       | bool { ConstB $1 TBool }
+
+Expr1 : Consts { $1 }
+      | '-' Consts { Minus $2 }
       | '[' bool ']' { ConstB $2 Dyn }
       | var { VarE $1 }
       | '(' Expr ')' { $2 }
       | '(' Expr ')''(' Expr ')' { AppE $2 $5 }
-      | if ExprBool then Expr1 else Expr1 { If $2 $4 $6 }
+      | if ExprBool then Expr else Expr { If $2 $4 $6 }
       |  '\\' var ':' Type '.' Expr { FuncE $2 $4 $6 }
       | '<' Type "<=" Type ',' var '>' Expr { ExprC $8 $4 $2 $6 }
       | none { None }
@@ -72,7 +75,7 @@ ExprArith : Expr '+' Expr1 { Add $1 $3 }
 ExprBool : Expr "<=" Expr1 { LessEq $1 $3 }
          | Expr ">=" Expr1 { BiggerEq $1 $3 }
          | Expr '<' Expr1 { Less $1 $3 }
-         | Expr '>' Expr1 { Bigger $1 $3 }
+         | Expr '>' Expr1 { Bigger $1 $3 } 
          | Expr "==" Expr1 { Eq $1 $3 }
   
 Type : "Int" { TInt }
