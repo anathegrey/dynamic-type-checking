@@ -263,8 +263,8 @@ module CastCalculus where
        interp (If e1 e2 e3) = if (takeBool (interp e1)) then (interp e2) else (interp e3)
        interp None = None
 
-       compiler :: String -> Expr
-       compiler s = interp (Parser.parse s) 
+       run :: String -> Expr
+       run s = interp (Parser.parse s) 
 
 
 --Examples
@@ -279,22 +279,22 @@ module CastCalculus where
        ex3 = AppE (ExprC (FuncE "y" TInt (Add (VarE "y") (ConstI 1 TInt))) (FuncT TInt TInt) (FuncT Dyn Dyn) "l") (ConstI 2 Dyn)
 
        ex4 :: Expr --ex3
-       ex4 =  compiler "(< Dyn -> Dyn <= Int -> Int, l> (\\y:Int.y+1))([2])"
+       ex4 =  run "(< Dyn -> Dyn <= Int -> Int, l> (\\y:Int.y+1))([2])"
 
        ex5 :: Expr
        ex5 = AppE (FuncE "x" TInt (VarE "x")) (ConstI 2 TInt)
        
        ex6 :: Expr
-       ex6 = compiler "(\\x:Int.x)(2)"
+       ex6 = run "(\\x:Int.x)(2)"
 
        ex7 :: Expr
        ex7 = AppE (FuncE "x" TInt (VarE "x")) (ConstF 2.4 TFloat)
 
        ex8 :: Expr
-       ex8 = compiler "(\\x:Int.x)(2.4)"
+       ex8 = run "(\\x:Int.x)(2.4)"
 
        ex9 :: Expr
-       ex9 = compiler "< Float <= Dyn, l > (\\y:Int.(if y > 0 then (y * 3 - y - 1) else none))(<Dyn <= Float, m > [3.01])"
+       ex9 = run "< Float <= Dyn, l > (\\y:Int.(if y > 0 then (y * 3 - y - 1) else none))(<Dyn <= Float, m > [3.01])"
 
        ex10 :: Expr
-       ex10 = compiler "< Float <= Dyn, l > ((\\y:Int.(if y > 0 then (y * 3 - y - 1) else none))(<Dyn <= Float, m > [-2.99]))"
+       ex10 = run "< Float <= Dyn, l > ((\\y:Int.(if y > 0 then (y * 3 - y - 1) else none))(<Dyn <= Float, m > [-2.99]))"
