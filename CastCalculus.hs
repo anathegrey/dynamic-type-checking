@@ -2,12 +2,12 @@ module CastCalculus where
        import CastData
        import Parser
        
-       succeed :: Expr -> Expr
+       succeed :: Expr -> Expr --implements rules Succeed and Fail from figure 2.2
        succeed (ExprC (ExprC v g1 Dyn l1) Dyn g2 l2)
                | (isValue v) && (isGround g1) && (isGround g2) = if g1 == g2 then v else (Blame g2 l2)
                | otherwise = interp (ExprC (ExprC v g1 Dyn l1) Dyn g2 l2)
 
-       appcast :: Expr -> Expr
+       appcast :: Expr -> Expr --implements rule Appcast from figure 2.2
        appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
                | (isValue v1) && (isValue v2) = ExprC (AppE v1 (ExprC v2 t3 t1 l)) t2 t4 l
                | otherwise = interp (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
@@ -16,24 +16,24 @@ module CastCalculus where
        buildCompatible :: Type -> Type
        buildCompatible (FuncT t1 t2) = FuncT t1 Dyn
 
-       ground :: Expr -> Expr
+       ground :: Expr -> Expr --implements rule Ground from figure 2.2
        ground (ExprC v t Dyn l)
               | (isValue v) && t /= Dyn && (isGround t) == False = let g = (buildCompatible t) in ExprC (ExprC v t g l) g Dyn l
               | otherwise = if (isValue v) then v else (ExprC v Dyn t l)
 
-       expand :: Expr -> Expr
+       expand :: Expr -> Expr --implements rule Expand from figure 2.2
        expand (ExprC v Dyn t l)
               | (isValue v) && t /= Dyn && (isGround t) == False = let g = (buildCompatible t) in ExprC (ExprC v Dyn g l) g t l
               | otherwise = if (isValue v) then v else (ExprC v Dyn t l)
 
-       subst :: Expr -> String -> Expr -> Expr
+       subst :: Expr -> String -> Expr -> Expr -- implements rule Beta from figure 2.2
        subst (ConstI n TInt) x v = (ConstI n TInt)
        subst (ConstI n Dyn) x v = (ConstI n Dyn)
        subst (ConstB n TBool) x v = (ConstB n TBool)
        subst (ConstB n Dyn) x v = (ConstB n Dyn)   
        subst (ConstF n TFloat) x v = (ConstF n TFloat)
        subst (ConstF n Dyn) x v = (ConstF n Dyn)
-       subst (VarE y) x v = if x == y then v else (VarE y) --erro
+       subst (VarE y) x v = if x == y then v else (VarE y) --error
        subst (FuncE y t f) x v = if x == y then (FuncE y t f) else (FuncE y t (subst f x v))
        subst (Add e1 e2) x v = Add (subst e1 x v) (subst e2 x v)
        subst (Sub e1 e2) x v = Sub (subst e1 x v) (subst e2 x v)
@@ -49,20 +49,22 @@ module CastCalculus where
        subst (Blame t l) x v = (Blame t l)
        subst None x v = None
 
---interpretador
+
+--interpreter
        interp :: Expr -> Expr
-       interp (AppE (FuncE x t f) v) = if (isValue v) then interp (subst f x v) else interp (AppE (FuncE x t f) (interp v))
-       interp (ExprC (ExprC v1 g1 Dyn l1) Dyn g2 l2) = interp (succeed (ExprC (ExprC v1 g1 Dyn l1) Dyn g2 l2))
-       interp (ExprC (Blame t l) t1 t2 l1) = if (t == t1) then (Blame t2 l) else interp (ExprC (Blame t l) t1 t2 l1)
-       interp (ExprC None t1 t2 l1) = if (t1 == Dyn && t2 /= Dyn) then (Blame t2 l1) else (Blame t1 l1)
-       interp (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2) = interp (appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2))
-       interp (AppE expr1 expr2) = (AppE (interp expr1) (interp expr2))
+       interp (AppE (FuncE x t f) v) = if (isValue v) then interp (subst f x v) else interp (AppE (FuncE x t f) (interp v)) --calls function subst
+       interp (ExprC (ExprC v1 g1 Dyn l1) Dyn g2 l2) = interp (succeed (ExprC (ExprC v1 g1 Dyn l1) Dyn g2 l2)) --calls function succeed
+       interp (ExprC (Blame t l) t1 t2 l1) = if (t == t1) then (Blame t2 l) else interp (ExprC (Blame t l) t1 t2 l1) --implements rule Blame from figure 2.2
+       interp (ExprC None t1 t2 l1) = if (t1 == Dyn && t2 /= Dyn) then (Blame t2 l1) else (Blame t1 l1) --in case value in cast is None, it will generate blame 
+       interp (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2) = interp (appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)) --calls function appcast and reduces it
+       interp (AppE expr1 expr2) = (AppE (interp expr1) (interp expr2)) --implements rule Cong from figure 2.2
        interp (ExprC expr t1 t2 l)
-              | (isValue expr) && t1 == t2 && t1 /= (FuncT Dyn Dyn) && t1 /= Dyn = expr
-              | (isValue expr) && t1 == t2 && t1 == Dyn = expr
-              | t1 /= Dyn && t2 == Dyn = interp (ground (ExprC (interp expr) t1 Dyn l))
-              | t1 == Dyn && t2 /= Dyn = interp (expand (ExprC (interp expr) Dyn t2 l)) 
+              | (isValue expr) && t1 == t2 && t1 /= (FuncT Dyn Dyn) && t1 /= Dyn = expr --implements rule idBase from figure 2.2
+              | (isValue expr) && t1 == t2 && t1 == Dyn = expr --implements rule idStar from figure 2.2
+              | t1 /= Dyn && t2 == Dyn = interp (ground (ExprC (interp expr) t1 Dyn l)) --calls function ground and reduces it
+              | t1 == Dyn && t2 /= Dyn = interp (expand (ExprC (interp expr) Dyn t2 l)) --calls function expand and reduces it
               | otherwise = interp (ExprC expr t1 t2 l)
+       --reduction of constants
        interp (ConstI x TInt) = (ConstI x TInt)
        interp (Minus (ConstI x TInt)) = Minus (ConstI x TInt)
        interp (ConstI x Dyn) = (ConstI x Dyn)
@@ -73,195 +75,211 @@ module CastCalculus where
        interp (Minus (ConstF x TFloat)) = Minus (ConstF x TFloat)
        interp (ConstF x Dyn) = (ConstF x Dyn)
        interp (Minus (ConstF x Dyn)) = Minus (ConstF x Dyn)
+       --reduction of arithmetic expressions
        interp (Add e1 e2)
-              | isInt expr1 =
-                  case () of
-                    () | isFloat expr2 -> ConstF (fromInt (takeInt expr1) + takeFloat expr2) TFloat
-                       | isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) + takeFloat expr2) Dyn
-                       | isInt expr2 -> ConstI (takeInt expr1 + takeInt expr2) TInt
-                       | isDynInt expr2 -> ConstI (takeInt expr1 + takeInt expr2) Dyn
-              | isFloat expr1 =
-                  case () of
-                    () | isFloat expr2 -> ConstF (takeFloat expr1 + takeFloat expr2) TFloat
-                       | isDynFloat expr2 -> ConstF (takeFloat expr1 + takeFloat expr2) Dyn
-                       | isInt expr2 -> ConstF (takeFloat expr1 + fromInt (takeInt expr2)) TFloat
-                       | isDynInt expr2 -> ConstF (takeFloat expr1 + fromInt (takeInt expr2)) Dyn
-              | isDynInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) + takeFloat expr2) Dyn
-                       | isInt expr2 || isDynInt expr2 -> ConstI (takeInt expr1 + takeInt expr2) Dyn
-              | isDynFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstF (takeFloat expr1 + takeFloat expr2) Dyn
-                       | isInt expr2 || isDynInt expr2 -> ConstF (takeFloat expr1 + fromInt (takeInt expr2)) Dyn
-              where expr1 = interp e1
-                    expr2 = interp e2
+              | isInt expr1 = x
+              | isFloat expr1 = y
+              | isDynInt expr1 = w
+              | isDynFloat expr1 = z
+              where
+                x = case x of 
+                      x | (isFloat expr2)    -> ConstF (fromInt (takeInt expr1) + takeFloat expr2) TFloat
+                        | isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) + takeFloat expr2) Dyn
+                        | isInt expr2      -> ConstI (takeInt expr1 + takeInt expr2) TInt
+                        | isDynInt expr2   -> ConstI (takeInt expr1 + takeInt expr2) Dyn
+                y = case y of
+                      y | isFloat expr2    -> ConstF (takeFloat expr1 + takeFloat expr2) TFloat
+                        | isDynFloat expr2 -> ConstF (takeFloat expr1 + takeFloat expr2) Dyn
+                        | isInt expr2      -> ConstF (takeFloat expr1 + fromInt (takeInt expr2)) TFloat
+                        | isDynInt expr2   -> ConstF (takeFloat expr1 + fromInt (takeInt expr2)) Dyn
+                w = case w of
+                      w | isFloat expr2 || isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) + takeFloat expr2) Dyn
+                        | isInt expr2 || isDynInt expr2     -> ConstI (takeInt expr1 + takeInt expr2) Dyn
+                z = case z of
+                      z | isFloat expr2 || isDynFloat expr2 -> ConstF (takeFloat expr1 + takeFloat expr2) Dyn
+                        | isInt expr2 || isDynInt expr2     -> ConstF (takeFloat expr1 + fromInt (takeInt expr2)) Dyn
+                expr1 = interp e1
+                expr2 = interp e2
        interp (Sub e1 e2) 
-              | isInt expr1 =
-                  case () of
-                    () | isFloat expr2 -> ConstF (fromInt (takeInt expr1) - takeFloat expr2) TFloat
-                       | isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) - takeFloat expr2) Dyn
-                       | isInt expr2 -> ConstI (takeInt expr1 - takeInt expr2) TInt
-                       | isDynInt expr2 -> ConstI (takeInt expr1 - takeInt expr2) Dyn
-              | isFloat expr1 =
-                  case () of
-                    () | isFloat expr2 -> ConstF (takeFloat expr1 - takeFloat expr2) TFloat
-                       | isDynFloat expr2 -> ConstF (takeFloat expr1 - takeFloat expr2) Dyn
-                       | isInt expr2 -> ConstF (takeFloat expr1 - fromInt (takeInt expr2)) TFloat
-                       | isDynInt expr2 -> ConstF (takeFloat expr1 - fromInt (takeInt expr2)) Dyn
-              | isDynInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) - takeFloat expr2) Dyn
-                       | isInt expr2 || isDynInt expr2 -> ConstI (takeInt expr1 - takeInt expr2) Dyn
-              | isDynFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstF (takeFloat expr1 - takeFloat expr2) Dyn
-                       | isInt expr2 || isDynInt expr2 -> ConstF (takeFloat expr1 - fromInt (takeInt expr2)) Dyn
-              where expr1 = interp e1
-                    expr2 = interp e2
+              | isInt expr1 = x
+              | isFloat expr1 = y
+              | isDynInt expr1 = w
+              | isDynFloat expr1 = z
+              where
+                x = case x of
+                      x | isFloat expr2 -> ConstF (fromInt (takeInt expr1) - takeFloat expr2) TFloat
+                        | isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) - takeFloat expr2) Dyn
+                        | isInt expr2 -> ConstI (takeInt expr1 - takeInt expr2) TInt
+                        | isDynInt expr2 -> ConstI (takeInt expr1 - takeInt expr2) Dyn
+
+                y = case y of
+                      y | isFloat expr2 -> ConstF (takeFloat expr1 - takeFloat expr2) TFloat
+                        | isDynFloat expr2 -> ConstF (takeFloat expr1 - takeFloat expr2) Dyn
+                        | isInt expr2 -> ConstF (takeFloat expr1 - fromInt (takeInt expr2)) TFloat
+                        | isDynInt expr2 -> ConstF (takeFloat expr1 - fromInt (takeInt expr2)) Dyn
+
+                w = case w of
+                      w | isFloat expr2 || isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) - takeFloat expr2) Dyn
+                        | isInt expr2 || isDynInt expr2 -> ConstI (takeInt expr1 - takeInt expr2) Dyn
+
+                z = case z of
+                      z | isFloat expr2 || isDynFloat expr2 -> ConstF (takeFloat expr1 - takeFloat expr2) Dyn
+                        | isInt expr2 || isDynInt expr2 -> ConstF (takeFloat expr1 - fromInt (takeInt expr2)) Dyn
+
+                expr1 = interp e1
+                expr2 = interp e2
        interp (Mul e1 e2) 
-              | isInt expr1 =
-                  case () of
-                    () | isFloat expr2 -> ConstF (fromInt (takeInt expr1) * takeFloat expr2) TFloat
-                       | isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) * takeFloat expr2) Dyn
-                       | isInt expr2 -> ConstI (takeInt expr1 * takeInt expr2) TInt
-                       | isDynInt expr2 -> ConstI (takeInt expr1 * takeInt expr2) Dyn
-              | isFloat expr1 =
-                  case () of
-                    () | isFloat expr2 -> ConstF (takeFloat expr1 * takeFloat expr2) TFloat
-                       | isDynFloat expr2 -> ConstF (takeFloat expr1 * takeFloat expr2) Dyn
-                       | isInt expr2 -> ConstF (takeFloat expr1 * fromInt (takeInt expr2)) TFloat
-                       | isDynInt expr2 -> ConstF (takeFloat expr1 * fromInt (takeInt expr2)) Dyn
-              | isDynInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) * takeFloat expr2) Dyn
-                       | isInt expr2 || isDynInt expr2 -> ConstI (takeInt expr1 * takeInt expr2) Dyn
-              | isDynFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstF (takeFloat expr1 * takeFloat expr2) Dyn
-                       | isInt expr2 || isDynInt expr2 -> ConstF (takeFloat expr1 * fromInt (takeInt expr2)) Dyn
-              where expr1 = interp e1
-                    expr2 = interp e2
+              | isInt expr1 = x
+              | isFloat expr1 = y
+              | isDynInt expr1 = w
+              | isDynFloat expr1 = z
+              where
+                x = case x of
+                      x | isFloat expr2 -> ConstF (fromInt (takeInt expr1) * takeFloat expr2) TFloat
+                        | isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) * takeFloat expr2) Dyn
+                        | isInt expr2 -> ConstI (takeInt expr1 * takeInt expr2) TInt
+                        | isDynInt expr2 -> ConstI (takeInt expr1 * takeInt expr2) Dyn
+
+                y = case y of
+                      y | isFloat expr2 -> ConstF (takeFloat expr1 * takeFloat expr2) TFloat
+                        | isDynFloat expr2 -> ConstF (takeFloat expr1 * takeFloat expr2) Dyn
+                        | isInt expr2 -> ConstF (takeFloat expr1 * fromInt (takeInt expr2)) TFloat
+                        | isDynInt expr2 -> ConstF (takeFloat expr1 * fromInt (takeInt expr2)) Dyn
+                w = case w of
+                      w | isFloat expr2 || isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) * takeFloat expr2) Dyn
+                        | isInt expr2 || isDynInt expr2 -> ConstI (takeInt expr1 * takeInt expr2) Dyn
+                z = case z of
+                      z | isFloat expr2 || isDynFloat expr2 -> ConstF (takeFloat expr1 * takeFloat expr2) Dyn
+                        | isInt expr2 || isDynInt expr2 -> ConstF (takeFloat expr1 * fromInt (takeInt expr2)) Dyn
+                expr1 = interp e1
+                expr2 = interp e2
        interp (Div e1 e2)
-              | isInt expr1 =
-                  case () of
-                    () | isFloat expr2 -> ConstF (fromInt (takeInt expr1) / takeFloat expr2) TFloat
-                       | isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) / takeFloat expr2) Dyn
-                       | isInt expr2 -> ConstF (fromInt (takeInt expr1) / fromInt (takeInt expr2)) TFloat
-                       | isDynInt expr2 -> ConstF (fromInt (takeInt expr1) / fromInt (takeInt expr2)) Dyn
-              | isFloat expr1 =
-                  case () of
-                    () | isFloat expr2 -> ConstF (takeFloat expr1 / takeFloat expr2) TFloat
-                       | isDynFloat expr2 -> ConstF (takeFloat expr1 / takeFloat expr2) Dyn
-                       | isInt expr2 -> ConstF (takeFloat expr1 / fromInt (takeInt expr2)) TFloat
-                       | isDynInt expr2 -> ConstF (takeFloat expr1 / fromInt (takeInt expr2)) Dyn
-              | isDynInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) / takeFloat expr2) Dyn
-                       | isInt expr2 || isDynInt expr2 -> ConstF (fromInt (takeInt expr1) / fromInt (takeInt expr2)) Dyn
-              | isDynFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstF (takeFloat expr1 / takeFloat expr2) Dyn
-                       | isInt expr2 || isDynInt expr2 -> ConstF (takeFloat expr1 / fromInt (takeInt expr2)) Dyn
-              where expr1 = interp e1
-                    expr2 = interp e2
+              | isInt expr1 = x
+              | isFloat expr1 = y
+              | isDynInt expr1 = w
+              | isDynFloat expr1 = z
+              where
+                x = case x of
+                      x | isFloat expr2 -> ConstF (fromInt (takeInt expr1) / takeFloat expr2) TFloat
+                        | isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) / takeFloat expr2) Dyn
+                        | isInt expr2 -> ConstF (fromInt (takeInt expr1) / fromInt (takeInt expr2)) TFloat
+                        | isDynInt expr2 -> ConstF (fromInt (takeInt expr1) / fromInt (takeInt expr2)) Dyn
+
+                y = case y of
+                      y | isFloat expr2 -> ConstF (takeFloat expr1 / takeFloat expr2) TFloat
+                        | isDynFloat expr2 -> ConstF (takeFloat expr1 / takeFloat expr2) Dyn
+                        | isInt expr2 -> ConstF (takeFloat expr1 / fromInt (takeInt expr2)) TFloat
+                        | isDynInt expr2 -> ConstF (takeFloat expr1 / fromInt (takeInt expr2)) Dyn
+                w = case () of
+                      w | isFloat expr2 || isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) / takeFloat expr2) Dyn
+                        | isInt expr2 || isDynInt expr2 -> ConstF (fromInt (takeInt expr1) / fromInt (takeInt expr2)) Dyn
+                z = case () of
+                      z | isFloat expr2 || isDynFloat expr2 -> ConstF (takeFloat expr1 / takeFloat expr2) Dyn
+                        | isInt expr2 || isDynInt expr2 -> ConstF (takeFloat expr1 / fromInt (takeInt expr2)) Dyn
+                expr1 = interp e1
+                expr2 = interp e2
        interp (Less e1 e2)
-              | isInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) < takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 < takeInt expr2) TBool
-              | isFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 < takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 < fromInt (takeInt expr2)) TBool
-              | isDynInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) < takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 < takeInt expr2) TBool
-              | isDynFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 < takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 < fromInt (takeInt expr2)) TBool
-              where expr1 = interp e1
-                    expr2 = interp e2
+              | isInt expr1 = x
+              | isFloat expr1 = y
+              | isDynInt expr1 = w
+              | isDynFloat expr1 = z
+              where
+                x = case x of
+                      x | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) < takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 < takeInt expr2) TBool
+                y = case y of
+                      y | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 < takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 < fromInt (takeInt expr2)) TBool
+                w = case w of
+                      w | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) < takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 < takeInt expr2) TBool
+                z = case z of
+                      z | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 < takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 < fromInt (takeInt expr2)) TBool
+                expr1 = interp e1
+                expr2 = interp e2
        interp (Bigger e1 e2)
-              | isInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) > takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 > takeInt expr2) TBool
-              | isFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 > takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 > fromInt (takeInt expr2)) TBool
-              | isDynInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) > takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 > takeInt expr2) TBool
-              | isDynFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 > takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 > fromInt (takeInt expr2)) TBool
-              where expr1 = interp e1
-                    expr2 = interp e2
+              | isInt expr1 = x
+              | isFloat expr1 = y
+              | isDynInt expr1 = w
+              | isDynFloat expr1 = z
+              where
+                x = case x of
+                      x | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) > takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 > takeInt expr2) TBool
+                y = case y of
+                      y | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 > takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 > fromInt (takeInt expr2)) TBool
+                w = case w of
+                      w | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) > takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 > takeInt expr2) TBool
+                z = case z of
+                      z | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 > takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 > fromInt (takeInt expr2)) TBool 
+                expr1 = interp e1
+                expr2 = interp e2
        interp (LessEq e1 e2)
-              | isInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) <= takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 <= takeInt expr2) TBool
-              | isFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 <= takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 <= fromInt (takeInt expr2)) TBool
-              | isDynInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) <= takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 <= takeInt expr2) TBool
-              | isDynFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 <= takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 <= fromInt (takeInt expr2)) TBool
-              where expr1 = interp e1
-                    expr2 = interp e2
+              | isInt expr1 = x
+              | isFloat expr1 = y
+              | isDynInt expr1 = w
+              | isDynFloat expr1 = z
+              where
+                x = case x of
+                      x | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) <= takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 <= takeInt expr2) TBool
+                y = case y of
+                      y | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 <= takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 <= fromInt (takeInt expr2)) TBool
+                w = case w of
+                      w | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) <= takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 <= takeInt expr2) TBool
+                z = case z of
+                      z | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 <= takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 <= fromInt (takeInt expr2)) TBool
+                expr1 = interp e1
+                expr2 = interp e2
        interp (Eq e1 e2)
-              | isInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) == takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 == takeInt expr2) TBool
-              | isFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 == takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 == fromInt (takeInt expr2)) TBool
-              | isDynInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) == takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 == takeInt expr2) TBool
-              | isDynFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 == takeFloat expr2) TBool 
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 == fromInt (takeInt expr2)) TBool
-              where expr1 = interp e1
-                    expr2 = interp e2
+              | isInt expr1 = x
+              | isFloat expr1 = y
+              | isDynInt expr1 = w
+              | isDynFloat expr1 = z
+              where
+                x = case x of
+                      x | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) == takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 == takeInt expr2) TBool
+                y = case y of
+                      y | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 == takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 == fromInt (takeInt expr2)) TBool
+                w = case w of
+                      w | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) == takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 == takeInt expr2) TBool
+                z = case z of
+                      z | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 == takeFloat expr2) TBool 
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 == fromInt (takeInt expr2)) TBool
+                expr1 = interp e1
+                expr2 = interp e2
        interp (BiggerEq e1 e2)
-              | isInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) >= takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 >= takeInt expr2) TBool
-              | isFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 >= takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 >= fromInt (takeInt expr2)) TBool
-              | isDynInt expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) >= takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 >= takeInt expr2) TBool
-              | isDynFloat expr1 =
-                  case () of
-                    () | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 >= takeFloat expr2) TBool
-                       | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 >= fromInt (takeInt expr2)) TBool
-              where expr1 = interp e1
-                    expr2 = interp e2
+              | isInt expr1 = x
+              | isFloat expr1 = y
+              | isDynInt expr1 = w
+              | isDynFloat expr1 = z
+              where
+                x = case x of
+                      x | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) >= takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 >= takeInt expr2) TBool
+                y = case y of
+                      y | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 >= takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 >= fromInt (takeInt expr2)) TBool
+                w = case w of
+                      w | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) >= takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 >= takeInt expr2) TBool
+                z = case z of
+                      z | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 >= takeFloat expr2) TBool
+                        | isInt expr2 || isDynInt expr2 -> ConstB (takeFloat expr1 >= fromInt (takeInt expr2)) TBool
+                expr1 = interp e1
+                expr2 = interp e2
        interp (If e1 e2 e3) = if (takeBool (interp e1)) then (interp e2) else (interp e3)
-       interp None = None
+       interp None = None 
 
        run :: String -> Expr
        run s = interp (Parser.parse s) 
