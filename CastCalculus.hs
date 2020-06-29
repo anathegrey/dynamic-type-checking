@@ -169,10 +169,10 @@ module CastCalculus where
                         | isDynFloat expr2 -> ConstF (takeFloat expr1 / takeFloat expr2) Dyn
                         | isInt expr2      -> ConstF (takeFloat expr1 / fromInt (takeInt expr2)) TFloat
                         | isDynInt expr2   -> ConstF (takeFloat expr1 / fromInt (takeInt expr2)) Dyn
-                w = case () of
+                w = case w of
                       w | isFloat expr2 || isDynFloat expr2 -> ConstF (fromInt (takeInt expr1) / takeFloat expr2) Dyn
                         | isInt expr2 || isDynInt expr2     -> ConstF (fromInt (takeInt expr1) / fromInt (takeInt expr2)) Dyn
-                z = case () of
+                z = case z of
                       z | isFloat expr2 || isDynFloat expr2 -> ConstF (takeFloat expr1 / takeFloat expr2) Dyn
                         | isInt expr2 || isDynInt expr2     -> ConstF (takeFloat expr1 / fromInt (takeInt expr2)) Dyn
                 expr1 = interp e1
