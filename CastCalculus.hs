@@ -191,7 +191,7 @@ module CastCalculus where
                         | isInt expr2 || isDynInt expr2     -> ConstB (takeFloat expr1 < fromInt (takeInt expr2)) TBool
                 w = case w of
                       w | isFloat expr2 || isDynFloat expr2 -> ConstB (fromInt (takeInt expr1) < takeFloat expr2) TBool
-                        | isInt expr2 || isDynInt expr2 -> ConstB (takeInt expr1 < takeInt expr2) TBool
+                        | isInt expr2 || isDynInt expr2     -> ConstB (takeInt expr1 < takeInt expr2) TBool
                 z = case z of
                       z | isFloat expr2 || isDynFloat expr2 -> ConstB (takeFloat expr1 < takeFloat expr2) TBool
                         | isInt expr2 || isDynInt expr2     -> ConstB (takeFloat expr1 < fromInt (takeInt expr2)) TBool
