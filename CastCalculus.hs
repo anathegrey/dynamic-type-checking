@@ -12,7 +12,7 @@ module CastCalculus where
                | (isValue v1) && (isValue v2) = ExprC (AppE v1 (ExprC v2 t3 t1 l)) t2 t4 l
                | otherwise = interp (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)
 
-       buildCompatible :: Type -> Type --auxiliar function for functions ground and expand
+       buildCompatible :: Type -> Type --auxiliary function for functions ground and expand
        buildCompatible (FuncT t1 t2) = FuncT t1 Dyn
 
        ground :: Expr -> Expr --implements rule Ground from figure 2.2
