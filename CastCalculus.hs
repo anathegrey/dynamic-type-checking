@@ -55,13 +55,13 @@ module CastCalculus where
        interp (ExprC (ExprC v1 g1 Dyn l1) Dyn g2 l2) = interp (succeed (ExprC (ExprC v1 g1 Dyn l1) Dyn g2 l2)) --calls function succeed
        interp (ExprC (Blame t l) t1 t2 l1) = if (t == t1) then (Blame t2 l) else interp (ExprC (Blame t l) t1 t2 l1) --implements rule Blame from figure 2.2
        interp (ExprC None t1 t2 l1) = if (t1 == Dyn && t2 /= Dyn) then (Blame t2 l1) else (Blame t1 l1) --in case value in cast is None, it will generate blame 
-       interp (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2) = interp (appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)) --calls function appcast and reduces it
+       interp (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2) = interp (appcast (AppE (ExprC v1 (FuncT t1 t2) (FuncT t3 t4) l) v2)) --calls function appcast 
        interp (AppE expr1 expr2) = (AppE (interp expr1) (interp expr2)) --implements rule Cong from figure 2.2
        interp (ExprC expr t1 t2 l)
               | (isValue expr) && t1 == t2 && t1 /= (FuncT Dyn Dyn) && t1 /= Dyn = expr --implements rule idBase from figure 2.2
               | (isValue expr) && t1 == t2 && t1 == Dyn = expr --implements rule idStar from figure 2.2
-              | t1 /= Dyn && t2 == Dyn = interp (ground (ExprC (interp expr) t1 Dyn l)) --calls function ground and reduces it
-              | t1 == Dyn && t2 /= Dyn = interp (expand (ExprC (interp expr) Dyn t2 l)) --calls function expand and reduces it
+              | t1 /= Dyn && t2 == Dyn = interp (ground (ExprC (interp expr) t1 Dyn l)) --calls function ground 
+              | t1 == Dyn && t2 /= Dyn = interp (expand (ExprC (interp expr) Dyn t2 l)) --calls function expand 
               | otherwise = interp (ExprC expr t1 t2 l)
        --reduction of constants
        interp (ConstI x TInt) = (ConstI x TInt)
